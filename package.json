@@ -1,0 +1,14 @@
+{
+  "name": "idgfilesupdater",
+  "version": "1.0.0",
+  "description": "Update files easily in IDG, for faster development",
+  "main": "app.js",
+  "scripts": {
+    "test": "nodemon app.js"
+  },
+  "author": "Santiago Gonzalez",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^3.0.0"
+  }
+}
