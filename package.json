@@ -9,6 +9,7 @@
   "author": "Santiago Gonzalez",
   "license": "ISC",
   "dependencies": {
+    "chokidar": "^3.0.2",
     "commander": "^3.0.0"
   }
 }

@@ -1,24 +1,28 @@
 /* 
-
+*
+*
+*
+*
 IDGFilesUpdater by Santiago Gonzalez
-
+*
+*
+*
+*
 */
 
-const https = require("https");
 const commander = require("commander");
-const path = require("path");
 const fs = require("fs");
-const dpMessages = require("./messages");
+const soma = require("./soma");
+const chokidar = require("chokidar");
 
 commander
   .option("-H, --host <host ip>", "set host")
   .option("-p, --port [port]", "specify a port", 5550)
   .option("-A, --auth <username:password>", "set the basic authentication")
   .option("-e, --endpoint [endpoint]", "set endpoint other than default (/service/mgmt/current)")
-  .option("-f, --file <file>", "specify absolute path of the file to be uploaded")
   .option(
     "-D, --dpg-location [datapower path]",
-    "specify location of file in datapower (default is local:/// + selected filename)",
+    "specify location of directory to upload files in datapower (default is local:///)",
     "local:///"
   )
   .parse(process.argv);
@@ -32,28 +36,16 @@ const port = commander.port;
 const endpoint = commander.endpoint ? commander.endpoint : "/service/mgmt/current";
 const auth = commander.auth;
 const dpgLocation = commander.dpgLocation;
-var filePath = commander.file;
-
-//var reqMessage = Buffer.from().toString("base64");
 
 if (!host || (!hostRegex.test(host) || !ipRegex.test(host))) {
   console.log("Please specify a valid host (use -H)");
+  process.exit(1);
 } else if (!auth) {
   console.log("Please provide valid credentials (use -A)");
-} else if (!filePath) {
-  console.log("Please specify a valid path for the file you want to upload (use -f)");
-} else {
-  //Validate path and read file
-  filePath = path.normalize(filePath);
-  fileName = path.parse(filePath).base;
-
-  try {
-    file = fs.readFileSync(filePath, { encoding: "utf8" });
-  } catch (error) {
-    console.error("Problem occured opening the file, please check the path:\n\n" + error);
-    return;
-  }
+  process.exit(1);
 }
+
+//TODO Verify DPG credentials when program starts
 
 const options = {
   hostname: host,
@@ -64,47 +56,34 @@ const options = {
   headers: {
     "Content-Type": "application/xml",
     Authorization: `Basic ${Buffer.from(auth).toString("base64")}`
-  }
+  },
+  timeout: 3000
 };
 
-fs.watch(filePath, "utf8", (event, trigger) => {
-  if (event === "change") {
-    console.log("\n---- FIle has changed! ----");
-    console.log(trigger);
-    const req = https.request(options, res => {
-      if (res.statusCode != 200) {
-        res.on("data", d => {
-          process.stdout.write(d);
-        });
-      } else {
-        console.log("Todo OK");
-      }
-    });
+watcher = chokidar.watch(["**/*.js", "**/*.xsl", "**/*.xml"], { persistent: true, ignoreInitial: true });
 
-    req.on("error", error => {
-      console.error(error);
-    });
-
-    req.write(dpMessages.setFile({ base64File: Buffer.from(file).toString("base64"), dpFilePath: dpgLocation + fileName }));
-    req.end();
-  }
-});
-
-/*
-const req = https.request(options, res => {
-  if (res.statusCode != 200) {
-    res.on("data", d => {
-      process.stdout.write(d);
-    });
-  } else {
-    console.log("Todo OK");
-  }
-});
-
-req.on("error", error => {
-  console.error(error);
-});
-
-req.write(dpMessages.setFile({ base64File: Buffer.from(file).toString("base64"), dpFilePath: dpgLocation + fileName }));
-req.end();
-*/
+watcher
+  .on("add", path => {
+    console.log(`Add event on ${path}`);
+    try {
+      file = fs.readFileSync(path, { encoding: "utf8" });
+    } catch (error) {
+      console.error("Problem occured opening the file:\n\n" + error);
+      return;
+    }
+    soma.upload(options, file, dpgLocation + path);
+  })
+  .on("change", path => {
+    console.log(`Change event on ${path}`);
+    try {
+      file = fs.readFileSync(path, { encoding: "utf8" });
+    } catch (error) {
+      console.error("Problem occured opening the file:\n\n" + error);
+      return;
+    }
+    soma.upload(options, file, dpgLocation + path);
+  })
+  .on("unlink", path => {
+    //TODO
+    console.log(`File ${path} has been removed`);
+  });
