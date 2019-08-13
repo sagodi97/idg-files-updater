@@ -14,6 +14,7 @@ const commander = require("commander");
 const fs = require("fs");
 const soma = require("./soma");
 const chokidar = require("chokidar");
+const ppath = require("path");
 
 commander
   .option("-H, --host <host ip>", "set host")
@@ -45,8 +46,6 @@ if (!host || (!hostRegex.test(host) || !ipRegex.test(host))) {
   process.exit(1);
 }
 
-//TODO Verify DPG credentials when program starts
-
 const options = {
   hostname: host,
   port: port,
@@ -60,7 +59,7 @@ const options = {
   timeout: 3000
 };
 
-watcher = chokidar.watch(["**/*.js", "**/*.xsl", "**/*.xml"], { persistent: true, ignoreInitial: true });
+watcher = chokidar.watch("mediation/", ["**/*.js", "**/*.xsl", "**/*.xml"], { persistent: true, ignoreInitial: true });
 
 watcher
   .on("add", path => {
@@ -71,7 +70,7 @@ watcher
       console.error("Problem occured opening the file:\n\n" + error);
       return;
     }
-    soma.upload(options, file, dpgLocation + path);
+    soma.upload(options, file, dpgLocation + ppath.basename(path));
   })
   .on("change", path => {
     console.log(`Change event on ${path}`);
@@ -81,9 +80,11 @@ watcher
       console.error("Problem occured opening the file:\n\n" + error);
       return;
     }
-    soma.upload(options, file, dpgLocation + path);
+    console.log("=========FILE READ=========");
+
+    soma.upload(options, file, dpgLocation + ppath.basename(path));
+    soma.flushCache(options);
   })
   .on("unlink", path => {
-    //TODO
     console.log(`File ${path} has been removed`);
   });

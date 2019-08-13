@@ -10,5 +10,18 @@ module.exports = {
     </soapenv:Body>
     </soapenv:Envelope>`;
   },
-  getFile: () => ``
+  flushStylesheetsCache: () => {
+    return `<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+     <env:Body>
+     <dp:request domain="OAB_MEDIATION_BASIC_DEV"
+    xmlns:dp="http://www.datapower.com/schemas/management">
+     <dp:do-action>
+     <FlushStylesheetCache>
+     <XMLManager>default</XMLManager>
+     </FlushStylesheetCache>
+     </dp:do-action>
+     </dp:request>
+     </env:Body>
+    </env:Envelope>`;
+  }
 };
